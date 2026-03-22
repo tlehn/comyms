@@ -1,6 +1,6 @@
 module github.com/todlehn/comyms
 
-go 1.26.1
+go 1.26
 
 require (
 	github.com/lithammer/fuzzysearch v1.1.8
