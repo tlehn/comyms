@@ -4,9 +4,23 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/lithammer/fuzzysearch/fuzzy"
 )
+
+// dateFormats lists the date layouts we attempt when parsing cell/filter values.
+var dateFormats = []string{
+	"2006-01-02",
+	"01/02/2006",
+	"1/2/2006",
+	"1/02/2006",
+	"01/2/2006",
+	"January 2, 2006",
+	"Jan 2, 2006",
+	"02-Jan-2006",
+	"2-Jan-2006",
+}
 
 // Operator evaluates whether a cell value satisfies a filter condition.
 type Operator interface {
@@ -21,10 +35,10 @@ func newOperator(name, value string) (Operator, error) {
 	case "contains":
 		return containsOp{value: strings.ToLower(value)}, nil
 	case "gt":
-		num, ok := parseFloat(value)
+		num, ok := parseNumeric(value)
 		return gtOp{num: num, numOk: ok}, nil
 	case "lt":
-		num, ok := parseFloat(value)
+		num, ok := parseNumeric(value)
 		return ltOp{num: num, numOk: ok}, nil
 	case "like":
 		return likeOp{value: value}, nil
@@ -36,6 +50,21 @@ func newOperator(name, value string) (Operator, error) {
 func parseFloat(s string) (float64, bool) {
 	n, err := strconv.ParseFloat(s, 64)
 	return n, err == nil
+}
+
+// parseNumeric tries to interpret s as a number. If that fails, it tries
+// common date formats and returns the Unix timestamp as a float64.
+func parseNumeric(s string) (float64, bool) {
+	if n, ok := parseFloat(s); ok {
+		return n, true
+	}
+	s = strings.TrimSpace(s)
+	for _, layout := range dateFormats {
+		if t, err := time.Parse(layout, s); err == nil {
+			return float64(t.Unix()), true
+		}
+	}
+	return 0, false
 }
 
 // eqOp matches when the cell equals the value (case-insensitive).
@@ -52,33 +81,31 @@ func (o containsOp) Match(cell string) bool {
 	return strings.Contains(strings.ToLower(cell), o.value)
 }
 
-// gtOp matches when both values are numeric and cell > threshold.
-// Non-numeric cells or a non-numeric filter value never match.
+// gtOp matches when both values parse as numeric (including dates) and cell > threshold.
 type gtOp struct {
-	num   float64
 	numOk bool
+	num   float64
 }
 
 func (o gtOp) Match(cell string) bool {
 	if !o.numOk {
 		return false
 	}
-	cellNum, ok := parseFloat(cell)
+	cellNum, ok := parseNumeric(cell)
 	return ok && cellNum > o.num
 }
 
-// ltOp matches when both values are numeric and cell < threshold.
-// Non-numeric cells or a non-numeric filter value never match.
+// ltOp matches when both values parse as numeric (including dates) and cell < threshold.
 type ltOp struct {
-	num   float64
 	numOk bool
+	num   float64
 }
 
 func (o ltOp) Match(cell string) bool {
 	if !o.numOk {
 		return false
 	}
-	cellNum, ok := parseFloat(cell)
+	cellNum, ok := parseNumeric(cell)
 	return ok && cellNum < o.num
 }
 

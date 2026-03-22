@@ -214,6 +214,50 @@ func TestGtOp(t *testing.T) {
 			t.Error("expected match")
 		}
 	})
+
+	// Given a gt operator with a date threshold "3/20/2026"
+	// When the cell value is "3/21/2026"
+	// Then it matches because 3/21 is after 3/20
+	t.Run("date after", func(t *testing.T) {
+		op, _ := newOperator("gt", "3/20/2026")
+
+		if !op.Match("3/21/2026") {
+			t.Error("expected match")
+		}
+	})
+
+	// Given a gt operator with a date threshold "3/20/2026"
+	// When the cell value is "3/20/2026" (same day)
+	// Then it does not match because gt is strictly after
+	t.Run("date equal", func(t *testing.T) {
+		op, _ := newOperator("gt", "3/20/2026")
+
+		if op.Match("3/20/2026") {
+			t.Error("expected no match")
+		}
+	})
+
+	// Given a gt operator with a date threshold "3/20/2026"
+	// When the cell value is "3/19/2026"
+	// Then it does not match
+	t.Run("date before", func(t *testing.T) {
+		op, _ := newOperator("gt", "3/20/2026")
+
+		if op.Match("3/19/2026") {
+			t.Error("expected no match")
+		}
+	})
+
+	// Given a gt operator with an ISO date threshold "2026-03-20"
+	// When the cell value uses M/D/YYYY format "3/21/2026"
+	// Then it matches across formats
+	t.Run("date mixed formats", func(t *testing.T) {
+		op, _ := newOperator("gt", "2026-03-20")
+
+		if !op.Match("3/21/2026") {
+			t.Error("expected match")
+		}
+	})
 }
 
 func TestLikeOp(t *testing.T) {
@@ -348,6 +392,39 @@ func TestLtOp(t *testing.T) {
 
 		if !op.Match("1.5") {
 			t.Error("expected match")
+		}
+	})
+
+	// Given a lt operator with a date threshold "3/20/2026"
+	// When the cell value is "3/19/2026"
+	// Then it matches because 3/19 is before 3/20
+	t.Run("date before", func(t *testing.T) {
+		op, _ := newOperator("lt", "3/20/2026")
+
+		if !op.Match("3/19/2026") {
+			t.Error("expected match")
+		}
+	})
+
+	// Given a lt operator with a date threshold "3/20/2026"
+	// When the cell value is "3/20/2026" (same day)
+	// Then it does not match because lt is strictly before
+	t.Run("date equal", func(t *testing.T) {
+		op, _ := newOperator("lt", "3/20/2026")
+
+		if op.Match("3/20/2026") {
+			t.Error("expected no match")
+		}
+	})
+
+	// Given a lt operator with a date threshold "3/20/2026"
+	// When the cell value is "3/21/2026"
+	// Then it does not match
+	t.Run("date after", func(t *testing.T) {
+		op, _ := newOperator("lt", "3/20/2026")
+
+		if op.Match("3/21/2026") {
+			t.Error("expected no match")
 		}
 	})
 }
